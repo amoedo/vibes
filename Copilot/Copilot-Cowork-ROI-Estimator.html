@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Microsoft Copilot Cowork Estimator with ROI-ish Labour Comparison</title>
+  <style>
+    :root {
+      --bg: #f6f8fb; --panel: #ffffff; --ink: #1f2937; --muted: #5b6472; --line: #d9e1ec;
+      --accent: #2563eb; --accent-dark: #174ea6; --accent-soft: #eaf1ff;
+      --success: #087f5b; --warning: #a16207; --danger: #b42318;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08); --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: "Segoe UI", Inter, Roboto, system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: radial-gradient(circle at top left, #eaf1ff 0, #f6f8fb 36%, #f8fafc 100%);
+      color: var(--ink); font-family: var(--sans); line-height: 1.45;
+    }
+    header { padding: 32px 22px 20px; max-width: 1240px; margin: 0 auto; }
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #2563eb 100%); color: white;
+      padding: 30px; border-radius: 24px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+    }
+    .hero:after { content: ""; position: absolute; inset: auto -80px -120px auto; width: 320px; height: 320px; background: rgba(255,255,255,0.13); border-radius: 50%; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; }
+    h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.03em; max-width: 900px; }
+    .subtitle { margin: 14px 0 0; max-width: 920px; color: rgba(255,255,255,0.86); font-size: 16px; }
+    main { max-width: 1240px; margin: 0 auto; padding: 0 22px 44px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; align-items: center; justify-content: space-between; }
+    .toolbar .left, .toolbar .right { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button {
+      border: 1px solid var(--line); background: white; color: var(--ink); padding: 10px 14px;
+      border-radius: 999px; font-weight: 650; cursor: pointer; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    button:hover { transform: translateY(-1px); }
+    .seg { display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:999px; padding:3px; box-shadow:0 2px 8px rgba(15,23,42,.05); }
+    .seg button { border:none; box-shadow:none; padding:7px 14px; border-radius:999px; font-size:13px; }
+    .seg button.active { background:var(--accent); color:#fff; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,0.16); color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 14px; }
+    .grid { display: grid; gap: 18px; }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 920px) { .grid.four { grid-template-columns: 1fr 1fr; } }
+    section.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin: 18px 0; }
+    .section-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+    .step-badge { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-dark); font-weight: 800; }
+    .section-title h2 { font-size: 23px; letter-spacing: -0.02em; }
+    .section-title p { margin: 7px 0 0; color: var(--muted); max-width: 920px; }
+    .note { padding: 12px 14px; background: #f8fafc; border: 1px solid #e5ebf3; border-radius: 12px; color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+    .formula { font-family: var(--mono); font-size: 13px; background: #0f172a; color: #dbeafe; padding: 11px 12px; border-radius: 12px; overflow-x: auto; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 11px 10px; vertical-align: middle; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    th { background: #f1f5fb; color: #334155; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; }
+    tbody tr:hover td { background: #fbfdff; }
+    tbody tr:last-child td { border-bottom: none; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    input[type="number"], input[type="text"], select { width: 100%; min-width: 96px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 10px; font: inherit; background: #fff; color: var(--ink); text-align: right; }
+    input[type="text"] { text-align: left; }
+    input:focus, select:focus { outline: 3px solid rgba(37, 99, 235, 0.18); border-color: var(--accent); }
+    .input-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 14px; margin-bottom: 16px; }
+    @media (max-width: 920px) { .input-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 620px) { .input-grid { grid-template-columns: 1fr; } }
+    label.small { display: block; font-size: 12px; color: var(--muted); font-weight: 750; margin: 0 0 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+    label.small .hint { cursor: help; color: var(--accent); font-weight: 800; border:1px solid var(--accent-soft); background:var(--accent-soft); border-radius:50%; padding:0 5px; margin-left:4px; }
+    .kpi { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-height: 118px; }
+    .kpi .label { color: var(--muted); font-weight: 700; font-size: 13px; }
+    .kpi .value { margin-top: 8px; font-size: clamp(24px, 3vw, 34px); font-weight: 850; letter-spacing: -0.03em; }
+    .kpi .sub { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .positive { color: var(--success); } .negative { color: var(--danger); } .neutral { color: var(--muted); }
+    .tag { display: inline-flex; border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 800; background: #eef2ff; color: #3730a3; }
+    .tag.good { background: #dcfce7; color: #166534; } .tag.bad { background: #fee2e2; color: #991b1b; } .tag.warn { background: #fef3c7; color: #92400e; }
+    .compact td, .compact th { padding: 9px; }
+    .muted { color: var(--muted); }
+    .sens { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:6px; }
+    .sens .cell { border:1px solid var(--line); border-radius:14px; padding:16px; text-align:center; background:#fbfdff; }
+    .sens .cell h4 { margin:0 0 4px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .sens .cell .big { font-size:26px; font-weight:850; letter-spacing:-.02em; }
+    .sens .cell .sm { font-size:13px; color:var(--muted); margin-top:4px; }
+    .barwrap{margin-top:6px;}
+    .barrow{display:grid;grid-template-columns:210px 1fr 150px;align-items:center;gap:12px;margin:9px 0;font-size:13px;}
+    .bartrack{background:#eef0f3;border-radius:6px;height:20px;overflow:hidden;}
+    .barfill{height:100%;border-radius:6px;}
+    .bar-ai{background:var(--accent);} .bar-hu{background:var(--success);}
+    .legend{display:flex;gap:18px;font-size:12px;color:var(--muted);margin:2px 0 10px;}
+    .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+    .refgrid { font-size:13px; }
+    .refgrid h3 { font-size:15px; margin:18px 0 8px; }
+    .refgrid li, .refgrid p { font-size:13px; color:#33383f; }
+    .verified { background:#dcfce7; color:#166534; font-weight:800; border-radius:999px; padding:2px 8px; font-size:11px; }
+    footer { max-width: 1240px; margin: 0 auto; padding: 0 22px 36px; color: var(--muted); font-size: 13px; }
+    .disclaimer { border-top: 1px solid var(--line); padding-top: 18px; }
+    /* modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 1000; overflow-y: auto; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 20px; max-width: 760px; width: 100%; box-shadow: 0 30px 70px rgba(15,23,42,.35); overflow: hidden; animation: pop .18s ease; }
+    @keyframes pop { from { transform: translateY(10px); opacity: .6; } to { transform: none; opacity: 1; } }
+    .modal-head { background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 60%, #2563eb 100%); color: #fff; padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-head h2 { font-size: 21px; }
+    .modal-close { background: rgba(255,255,255,.18); border: none; color: #fff; font-size: 20px; line-height: 1; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+    .modal-body { padding: 24px 26px; max-height: 70vh; overflow-y: auto; }
+    .modal-body h3 { font-size: 15px; margin: 18px 0 6px; color: var(--accent-dark); }
+    .modal-body p, .modal-body li { font-size: 14px; color: #33383f; }
+    .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 4px; }
+    .flow .node { background: var(--accent-soft); color: var(--accent-dark); border-radius: 10px; padding: 7px 11px; font-size: 12px; font-weight: 700; }
+    .flow .arrow { color: var(--muted); font-weight: 800; }
+    .callout { border: 1px solid #fde68a; background: #fffbeb; border-left: 5px solid #f59e0b; border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+    .callout h3 { margin-top: 0; color: #92400e; }
+    @media print {
+      body { background: white; }
+      header, main, footer { max-width: none; }
+      button, .toolbar, .seg, .modal-overlay { display: none !important; }
+      section.card, .hero { box-shadow: none; break-inside: avoid; }
+      input { border: none; background: transparent; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <div class="pill">Standalone calculator · based on the Microsoft Cowork estimator workbook</div>
+      <h1>Microsoft Copilot Cowork pricing estimator with ROI-ish labour comparison</h1>
+      <p class="subtitle">Keeps the original credit-consumption model (Steps 1–4) and extends it with fully-loaded
+        employee hourly cost (Step 5), human task-time assumptions and per-task break-even (Step 6), and a directional
+        comparison between Cowork consumption cost and equivalent human labour cost (Step 7). Switch the regional
+        benchmark preset (Spain / US / India offshore) and read the sourced references at the bottom. Tap
+        <strong>How it works</strong> for the methodology.</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="left">
+        <button class="primary" id="btnHelp">How it works</button>
+        <div class="seg" id="regionSeg">
+          <button class="active" data-region="ES">€ EUR · Spain</button>
+          <button data-region="US">$ USD · US</button>
+          <button data-region="IN">$ USD · India (offshore)</button>
+        </div>
+        <button id="btnSample">Load sample users</button>
+      </div>
+      <div class="right">
+        <button id="btnReset">Reset</button>
+        <button id="btnExport">Export JSON</button>
+        <button id="btnPrint">Print / PDF</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="helpModal" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>How this calculator works</h2>
+          <button class="modal-close" id="btnHelpClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>This tool keeps Microsoft's original Copilot Cowork credit-consumption model and extends it into a
+            directional ROI comparison against the cost of doing the same work with human labour. Work through the steps
+            top to bottom; every figure is editable and the page recalculates instantly.</p>
+
+          <div class="flow">
+            <span class="node">1 · Users</span><span class="arrow">&rarr;</span>
+            <span class="node">2 · Prompt mix</span><span class="arrow">&rarr;</span>
+            <span class="node">3 · Credits &amp; price</span><span class="arrow">&rarr;</span>
+            <span class="node">4 · Budget</span><span class="arrow">&rarr;</span>
+            <span class="node">5 · Cost/hour</span><span class="arrow">&rarr;</span>
+            <span class="node">6 · Human time</span><span class="arrow">&rarr;</span>
+            <span class="node">7 · ROI</span>
+          </div>
+
+          <h3>The calculation, step by step</h3>
+          <ul>
+            <li><strong>Steps 1–2:</strong> for each archetype you set the number of users and how many Light / Medium /
+              Heavy prompts each runs per month.</li>
+            <li><strong>Step 3:</strong> each prompt type consumes a fixed number of Copilot Credits (125 / 500 / 1,200
+              by default). Credits convert to money at the list price — 100 credits = 1 currency unit, i.e. $0.01 per
+              credit, matching Microsoft's pay-as-you-go rate.</li>
+            <li><strong>Step 4:</strong> monthly credits = &Sigma; (users &times; credits per user); budget = credits &divide; 100.
+              This is the original Microsoft output, plus an annualized line.</li>
+            <li><strong>Step 5:</strong> a fully-loaded hourly cost per archetype = salary &times; (1 + employer burden) &divide;
+              productive hours per year.</li>
+            <li><strong>Step 6:</strong> you estimate how long a human would take to do the equivalent of each task type,
+              which yields the human-equivalent hours and a per-task break-even.</li>
+            <li><strong>Step 7:</strong> human labour value = human hours &times; hourly cost &times; <em>value realization %</em>.
+              ROI-ish = (labour value &minus; Cowork cost) &divide; Cowork cost.</li>
+          </ul>
+
+          <div class="callout">
+            <h3>Why the Value Realization % matters most</h3>
+            <p>This single assumption is the biggest driver of the result, and the easiest to overstate. It answers:
+              <strong>of the human time a task would have taken, how much do you actually recover as real, redeployable
+              value?</strong></p>
+            <p>Rarely is it 100%. AI output usually needs review, correction, or context that the original worker still
+              supplies; saved minutes are often scattered and not recaptured as productive work; and not every "task" the
+              AI does would truly have been done by a person. A realization of <strong>50%</strong> (the default here)
+              says half the theoretical time saving converts into genuine value — a deliberately conservative, defensible
+              starting point. Move it up only if you can evidence it. Use the <strong>sensitivity band</strong> in Step 7
+              (50 / 75 / 100%) when presenting, rather than betting on a single optimistic number.</p>
+          </div>
+
+          <h3>Adoption factor</h3>
+          <p>Scales how many licensed users are actually active. It moves cost and value together, so absolute totals
+            reflect a realistic ramp while the ROI ratio is unchanged.</p>
+
+          <p class="muted" style="margin-top:16px;">Directional decision-support only — not an accounting ROI or a Microsoft
+            price quote. Validate against your own compensation, utilization and adoption data.</p>
+        </div>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">1</div>
+        <div class="section-title">
+          <h2>Who will use Cowork?</h2>
+          <p>Enter the number of licensed users per archetype. The adoption factor scales how many actually use Cowork
+            (it applies to both cost and value, so the ROI ratio is unchanged but totals reflect a realistic ramp).</p>
+        </div>
+      </div>
+      <div class="input-grid" style="grid-template-columns:repeat(2,minmax(150px,1fr))">
+        <div>
+          <label class="small" for="adoptionPct">Adoption factor %
+            <span class="hint" title="Share of licensed users who actively use Cowork in a given month. 100% = everyone licensed is active.">?</span>
+          </label>
+          <input id="adoptionPct" type="number" min="0" max="100" step="5" value="100" data-field="adoptionPct" />
+        </div>
+        <div>
+          <label class="small">Active users (calculated)</label>
+          <input id="activeUsersDisplay" type="text" readonly value="0" aria-label="Active users (calculated)" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employee archetype</th><th>Licensed users</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">2</div>
+        <div class="section-title">
+          <h2>How many light, medium, and heavy prompts will each user execute per month?</h2>
+          <p>Task-mix defaults are copied from the Microsoft workbook (Frontier customer usage as of 2026-05-27).
+            Adjust to your expected Cowork usage pattern.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee archetype</th>
+              <th>Light<br><span class="muted">per user / month</span></th>
+              <th>Medium<br><span class="muted">per user / month</span></th>
+              <th>Heavy<br><span class="muted">per user / month</span></th>
+              <th>Monthly Copilot Credit spend per user</th>
+              <th>Monthly Cowork cost per user</th>
+            </tr>
+          </thead>
+          <tbody id="tasksBody"></tbody>
+        </table>
+      </div>
+      <div class="note">Light = narrow context, lightweight model, 0–1 tool calls, minimal runtime. Medium = richer
+        context, capable model, several tool calls, moderate runtime. Heavy = broad context aggregation, high-quality
+        model, many tool calls, sustained runtime.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">3</div>
+        <div class="section-title">
+          <h2>How many Copilot Credits are consumed per prompt?</h2>
+          <p>Defaults from the Microsoft estimator. List-price conversion kept as 100 credits = 1 currency unit,
+            matching the original budget = credits ÷ 100 formula and Microsoft's $0.01/credit pay-as-you-go rate.</p>
+        </div>
+      </div>
+      <div class="input-grid">
+        <div>
+          <label class="small" for="currencySymbol">Currency symbol</label>
+          <input id="currencySymbol" type="text" value="€" />
+        </div>
+        <div>
+          <label class="small" for="pricePer100">List price per 100 credits</label>
+          <input id="pricePer100" type="number" min="0" step="0.01" value="1" data-field="pricePer100" />
+        </div>
+        <div>
+          <label class="small" for="creditsLight">Light credits per prompt</label>
+          <input id="creditsLight" type="number" min="0" step="1" value="125" data-field="credits.light" />
+        </div>
+        <div>
+          <label class="small" for="creditsMedium">Medium credits per prompt</label>
+          <input id="creditsMedium" type="number" min="0" step="1" value="500" data-field="credits.medium" />
+        </div>
+        <div>
+          <label class="small" for="creditsHeavy">Heavy credits per prompt</label>
+          <input id="creditsHeavy" type="number" min="0" step="1" value="1200" data-field="credits.heavy" />
+        </div>
+      </div>
+      <div class="formula">Monthly credits = SUM(active users × ((light × light credits) + (medium × medium credits) + (heavy × heavy credits)))</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">4</div>
+        <div class="section-title">
+          <h2>Summary of the original pricing model</h2>
+          <p>The same directional consumption view as the workbook, with an added annualized budget line.</p>
+        </div>
+      </div>
+      <div class="grid four">
+        <div class="kpi"><div class="label">Estimated monthly Copilot Credits</div><div class="value" id="kpiCredits">0</div><div class="sub">Population-wide consumption</div></div>
+        <div class="kpi"><div class="label">Estimated monthly Cowork budget</div><div class="value" id="kpiMonthlyBudget">€0</div><div class="sub">List pricing</div></div>
+        <div class="kpi"><div class="label">Average price per active user / month</div><div class="value" id="kpiPerUser">n/a</div><div class="sub">Monthly budget ÷ active users</div></div>
+        <div class="kpi"><div class="label">Estimated annual Cowork budget</div><div class="value" id="kpiAnnualBudget">€0</div><div class="sub">Monthly budget × 12</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">5</div>
+        <div class="section-title">
+          <h2>Average cost per hour of each employee archetype</h2>
+          <p>Configure gross annual salary, employer burden, and productive hours per year for a fully-loaded hourly cost.
+            Defaults map each archetype to a sourced labour profile (see References). Editable modelling assumptions.</p>
+        </div>
+      </div>
+      <div class="input-grid">
+        <div>
+          <label class="small" for="employerBurdenPct">Employer burden / on-cost %
+            <span class="hint" title="Employer social-security and on-costs added to gross salary. Spain ~30–32%; US ~20–25%; India ~15%.">?</span>
+          </label>
+          <input id="employerBurdenPct" type="number" min="0" step="1" value="31" data-field="employerBurdenPct" />
+        </div>
+        <div>
+          <label class="small" for="productiveHours">Effective productive hours / year
+            <span class="hint" title="Paid hours minus holidays, leave, training and idle time. Spain ~1,725; US ~1,850; India ~2,000.">?</span>
+          </label>
+          <input id="productiveHours" type="number" min="1" step="1" value="1725" data-field="productiveHours" />
+        </div>
+        <div>
+          <label class="small" for="weightedHourlyDisplay">Weighted average hourly cost</label>
+          <input id="weightedHourlyDisplay" type="text" readonly value="n/a" />
+        </div>
+        <div>
+          <label class="small">Blended-rate shortcuts</label>
+          <div style="display:flex;gap:8px;">
+            <button id="btnBlend50" style="flex:1;padding:9px 6px;">50/h</button>
+            <button id="btnBlend75" style="flex:1;padding:9px 6px;">75/h</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee archetype</th>
+              <th>Default profile</th>
+              <th>Gross annual salary</th>
+              <th>Fully loaded annual cost</th>
+              <th>Average cost per hour</th>
+              <th>Weight from Step 1</th>
+            </tr>
+          </thead>
+          <tbody id="costBody"></tbody>
+        </table>
+      </div>
+      <div class="formula" style="margin-top:14px;">Average cost per hour = salary × (1 + employer burden) ÷ effective productive hours</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">6</div>
+        <div class="section-title">
+          <h2>Average human work time by task type &amp; per-task economics</h2>
+          <p>Estimate how much human effort a Light, Medium, or Heavy task would normally take without Cowork. Use the
+            realization factor to discount the value if only part of that time is truly avoided or repurposed.</p>
+        </div>
+      </div>
+      <div class="input-grid">
+        <div>
+          <label class="small" for="minutesLight">Light task human time, minutes</label>
+          <input id="minutesLight" type="number" min="0" step="1" value="10" data-field="minutes.light" />
+        </div>
+        <div>
+          <label class="small" for="minutesMedium">Medium task human time, minutes</label>
+          <input id="minutesMedium" type="number" min="0" step="1" value="45" data-field="minutes.medium" />
+        </div>
+        <div>
+          <label class="small" for="minutesHeavy">Heavy task human time, minutes</label>
+          <input id="minutesHeavy" type="number" min="0" step="1" value="120" data-field="minutes.heavy" />
+        </div>
+        <div>
+          <label class="small" for="realizationPct">Value realization factor %
+            <span class="hint" title="Share of the equivalent human time the AI truly avoids or repurposes. e.g. 50% assumes half the saved time becomes real value; the rest is review/rework or not recaptured. Biggest driver of ROI — see 'How it works'.">?</span>
+          </label>
+          <input id="realizationPct" type="number" min="0" max="100" step="5" value="50" data-field="realizationPct" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>Task type</th>
+              <th>Credits per task</th>
+              <th>Consumption cost per task</th>
+              <th>Human minutes</th>
+              <th>Break-even minutes</th>
+              <th>Labour cost per task at weighted hourly cost</th>
+              <th>Task-level ratio</th>
+            </tr>
+          </thead>
+          <tbody id="taskCompareBody"></tbody>
+        </table>
+      </div>
+      <div class="note">Break-even minutes = how much human time a task must save before its consumption cost is covered,
+        at the weighted average hourly cost from Step 5.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div class="step-badge">7</div>
+        <div class="section-title">
+          <h2>ROI-ish comparison: Cowork consumption cost vs human labour cost</h2>
+          <p>Compares estimated monthly Cowork consumption cost against the equivalent human labour value of the same
+            task volume. Decision-support model, not an accounting ROI.</p>
+        </div>
+      </div>
+      <div class="grid four">
+        <div class="kpi"><div class="label">Monthly Cowork consumption cost</div><div class="value" id="kpiRoiCost">€0</div><div class="sub">From Steps 1–4</div></div>
+        <div class="kpi"><div class="label">Monthly labour equivalent</div><div class="value" id="kpiLabourValue">€0</div><div class="sub">After realization factor</div></div>
+        <div class="kpi"><div class="label">Potential value delta</div><div class="value" id="kpiDelta">€0</div><div class="sub">Monthly · annual below</div></div>
+        <div class="kpi"><div class="label">ROI-ish</div><div class="value" id="kpiRoi">n/a</div><div class="sub" id="kpiRoiSub">Delta ÷ Cowork cost</div></div>
+      </div>
+
+      <h3 style="margin:22px 0 6px;font-size:16px;">Per-archetype comparison</h3>
+      <div class="legend">
+        <span><i class="bar-hu"></i>Human-equivalent labour</span>
+        <span><i class="bar-ai"></i>Cowork consumption cost</span>
+      </div>
+      <div class="barwrap" id="bars"></div>
+
+      <div class="table-wrap" style="margin-top: 18px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee archetype</th>
+              <th>Active users</th>
+              <th>Monthly Cowork cost</th>
+              <th>Human hours / month</th>
+              <th>Labour equivalent / month</th>
+              <th>Value delta / month</th>
+              <th>Benefit : cost</th>
+              <th>ROI-ish</th>
+            </tr>
+          </thead>
+          <tbody id="roiBody"></tbody>
+          <tfoot id="roiFoot"></tfoot>
+        </table>
+      </div>
+      <div class="formula" style="margin-top: 14px;">ROI-ish = (labour equivalent value − Cowork consumption cost) ÷ Cowork consumption cost</div>
+
+      <h3 style="margin:22px 0 6px;font-size:16px;">Sensitivity to the realization factor</h3>
+      <div class="sens" id="sens"></div>
+      <div class="note">Same population and costs, three assumptions for how much human time is actually avoided.
+        Use this band rather than a single point estimate when presenting.</div>
+    </section>
+
+    <details class="card refgrid" open>
+      <summary style="cursor:pointer;font-weight:800;font-size:18px;list-style:none;">Benchmarks, methodology &amp; references</summary>
+      <p>Rule of thumb: a <strong>fully-loaded knowledge-worker cost is €40–€70/hour</strong> in Europe/Spain-style
+        settings, roughly <strong>$60–$95/hour</strong> in the US, and <strong>$5–$20/hour</strong> for an internal
+        offshore employee in India. The default presets below feed Step 5; all values remain editable.</p>
+
+      <h3>🇪🇸 Spain (EUR) — default preset</h3>
+      <p class="muted">Assumes ~31% employer social contributions and ~1,725 effective working hours/year.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Archetype → Profile</th><th>Gross salary</th><th>Fully loaded</th><th>≈ Cost / hour</th></tr></thead>
+          <tbody>
+            <tr><td>Corporate KW → Mid knowledge worker</td><td>€45k</td><td>~€59k</td><td>~€34/h</td></tr>
+            <tr><td>Customer-Facing KW → Benchmark/mid</td><td>€38k</td><td>~€50k</td><td>~€29/h</td></tr>
+            <tr><td>Technical → Senior knowledge worker</td><td>€60k</td><td>~€79k</td><td>~€46/h</td></tr>
+            <tr><td>Managers &amp; Leaders → Specialist/manager</td><td>€80k</td><td>~€105k</td><td>~€61/h</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><span class="verified">VERIFIED</span> Eurostat: 2025 average hourly labour cost €34.9 (EU) / €38.2
+        (euro area), up from €33.5 / €36.8 in 2024 ·
+        <a href="https://ec.europa.eu/eurostat/web/products-eurostat-news/w/ddn-20260331-2" target="_blank" rel="noopener">Eurostat, Mar 2026</a>.
+        Spain Q1-2026 labour cost ≈ €3,278/month per worker; employer contributions ~30%+ ·
+        <a href="https://www.ine.es/dyngs/INEbase/en/operacion.htm?c=Estadistica_C&cid=1254736045053&idp=1254735976596" target="_blank" rel="noopener">INE Quarterly Labour Cost Survey</a>.</p>
+
+      <h3>🇺🇸 United States (USD)</h3>
+      <p class="muted">Assumes ~22% benefits/payroll burden and ~1,850 productive hours/year.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Archetype → BLS group</th><th>Gross salary</th><th>Fully loaded</th><th>≈ Cost / hour</th></tr></thead>
+          <tbody>
+            <tr><td>Corporate KW → Business/financial</td><td>$78k</td><td>~$95k</td><td>~$51/h</td></tr>
+            <tr><td>Customer-Facing KW → Office/admin+sales</td><td>$66k</td><td>~$81k</td><td>~$44/h</td></tr>
+            <tr><td>Technical → Computer/mathematical</td><td>$120k</td><td>~$146k</td><td>~$79/h</td></tr>
+            <tr><td>Managers &amp; Leaders → Management</td><td>$150k</td><td>~$183k</td><td>~$99/h</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">BLS May 2025 mean hourly wages (salary only): $45.78 business/financial, $57.73 computer/mathematical,
+        $69.84 management. Add benefits/payroll burden for a fully-loaded ~$60–$95/h ·
+        <a href="https://www.bls.gov/news.release/pdf/ocwage.pdf" target="_blank" rel="noopener">BLS Occupational Employment &amp; Wages, May 2025</a>.</p>
+
+      <h3>🇮🇳 India — offshore (USD)</h3>
+      <p class="muted">Assumes ~15% statutory employer burden (PF, ESI, gratuity) and ~2,000 productive hours/year. These
+        are <em>internal</em> fully-loaded employer costs, not vendor billing rates.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Archetype</th><th>Gross salary</th><th>Fully loaded</th><th>≈ Cost / hour</th></tr></thead>
+          <tbody>
+            <tr><td>Corporate KW (mid)</td><td>$12k</td><td>~$13.8k</td><td>~$6.9/h</td></tr>
+            <tr><td>Customer-Facing KW (BPO/support)</td><td>$8k</td><td>~$9.2k</td><td>~$4.6/h</td></tr>
+            <tr><td>Technical (software engineer)</td><td>$20k</td><td>~$23k</td><td>~$11.5/h</td></tr>
+            <tr><td>Managers &amp; Leaders</td><td>$35k</td><td>~$40k</td><td>~$20/h</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Loaded FTE costs in India run ~$8k–$15k/year for engineers (vs $60k–$120k US); mid CTC ≈ $14k–$24k.
+        Note: offshore <em>vendor billing rates</em> are higher (~$20–$45/h) because they include vendor margin — if you
+        want to model billed cost, enter those as salaries or use a blended rate. Sources:
+        <a href="https://distantjob.com/blog/offshore-software-development-rates-by-country-2025/" target="_blank" rel="noopener">DistantJob offshore rates 2025</a>,
+        <a href="https://www.levels.fyi/t/software-engineer/locations/india" target="_blank" rel="noopener">levels.fyi India</a>.</p>
+
+      <h3>Blended-rate shortcuts &amp; sensitivity</h3>
+      <p>Suggested blended rates for AI ROI: <strong>€50/h</strong> conservative European knowledge worker;
+        <strong>€75/h</strong> if the population skews senior tech / consulting / legal / finance / management (Step 5
+        buttons). Because the result is so sensitive to the <strong>Value Realization %</strong>, present the Step 7
+        sensitivity band (50 / 75 / 100%) rather than a single point estimate. The default realization is set to a
+        deliberately conservative <strong>50%</strong>.</p>
+
+      <h3>Microsoft official sources</h3>
+      <ul>
+        <li><strong>Original announcement:</strong>
+          <a href="https://www.microsoft.com/en-us/microsoft-365/blog/2026/03/09/copilot-cowork-a-new-way-of-getting-work-done/" target="_blank" rel="noopener">"Copilot Cowork: A new way of getting work done" — Microsoft 365 Blog, 9 Mar 2026</a>
+          (also: <a href="https://www.microsoft.com/en-us/microsoft-365/blog/2026/06/16/copilot-cowork-is-now-generally-available/" target="_blank" rel="noopener">GA announcement, 16 Jun 2026</a>).</li>
+        <li><strong>Copilot Credits documentation (Microsoft Learn):</strong>
+          <a href="https://learn.microsoft.com/microsoft-copilot-studio/copilot-credits-overview" target="_blank" rel="noopener">Copilot Credits overview</a> —
+          confirms pay-as-you-go list price of <strong>$0.01 per credit</strong>
+          (100 credits = $1, matching this model), plus Capacity Packs ($200/mo = 25,000 credits) and Pre-Purchase plans.</li>
+        <li><strong>Cowork usage-based billing:</strong>
+          <a href="https://learn.microsoft.com/microsoft-365/copilot/usage-based-billing-overview-copilot-credits" target="_blank" rel="noopener">Understand usage-based billing and cost management for Copilot Credits</a> ·
+          <a href="https://learn.microsoft.com/microsoft-365/copilot/cowork/cowork-admin-governance" target="_blank" rel="noopener">Manage Copilot Cowork for your organization</a>.</li>
+        <li><strong>Original workbook:</strong> <a href="https://aka.ms/CustomerCoworkEstimator" target="_blank" rel="noopener">Customer Cowork Estimator</a> (the source spreadsheet these Steps 1–4 reproduce).</li>
+      </ul>
+      <p class="note">Eurostat and the $0.01/credit price are confirmed against source. Spain Q1-2026, BLS, and India
+        figures are cited to their primary publishers and should be re-checked against the latest releases before external use.</p>
+    </details>
+  </main>
+
+  <footer>
+    <div class="disclaimer">
+      <p><strong>Model notes.</strong> Steps 1–4 credit assumptions come from the CustomerCoworkEstimator workbook
+        (Microsoft Frontier customer usage as of 2026-05-27; illustrative only; assumes Anthropic Opus 4.8). The labour
+        cost and ROI-ish sections are added modelling layers and should be validated with your own compensation,
+        utilization, productivity, and adoption data.</p>
+    </div>
+  </footer>
+
+  <script>
+    const STORAGE_KEY = "cowork-roi-estimator-v3";
+
+    /* Region presets: symbol, burden, hours, and archetype salaries anchored to sourced benchmarks. */
+    const REGIONS = {
+      ES: { currencySymbol: "€", employerBurdenPct: 31, productiveHours: 1725, salaries: [45000, 38000, 60000, 80000] },
+      US: { currencySymbol: "$", employerBurdenPct: 22, productiveHours: 1850, salaries: [78000, 66000, 120000, 150000] },
+      IN: { currencySymbol: "$", employerBurdenPct: 15, productiveHours: 2000, salaries: [12000, 8000, 20000, 35000] }
+    };
+
+    const defaults = {
+      region: "ES",
+      currencySymbol: "€",
+      pricePer100: 1,
+      employerBurdenPct: 31,
+      productiveHours: 1725,
+      realizationPct: 50,
+      adoptionPct: 100,
+      credits: { light: 125, medium: 500, heavy: 1200 },
+      minutes: { light: 10, medium: 45, heavy: 120 },
+      archetypes: [
+        { key: "corporate", label: "Corporate Knowledge Workers", profile: "Mid knowledge worker", users: 0, salary: 45000, tasks: { light: 22, medium: 11, heavy: 5 } },
+        { key: "customer", label: "Customer-Facing Knowledge Workers", profile: "Benchmark / mid", users: 0, salary: 38000, tasks: { light: 17, medium: 13, heavy: 5 } },
+        { key: "technical", label: "Technical Workers", profile: "Senior knowledge worker", users: 0, salary: 60000, tasks: { light: 12, medium: 9, heavy: 14 } },
+        { key: "managers", label: "Managers and Senior Leaders", profile: "Specialist / manager", users: 0, salary: 80000, tasks: { light: 13, medium: 6, heavy: 3 } }
+      ]
+    };
+
+    let state = deepClone(defaults);
+
+    /* safe storage (graceful fallback if blocked) */
+    const storage = (() => {
+      try { const k = "__t"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return localStorage; }
+      catch (e) { let m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; }
+    })();
+
+    function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+    function n(value, fallback = 0) { const p = Number(value); return Number.isFinite(p) ? p : fallback; }
+    function byId(id) { return document.getElementById(id); }
+    function getCurrency() { return state.currencySymbol || ""; }
+    function money(value, decimals = 0) {
+      const currency = getCurrency();
+      const abs = Math.abs(value);
+      const formatted = abs.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      return `${value < 0 ? "-" : ""}${currency}${formatted}`;
+    }
+    function numberFmt(value, decimals = 0) {
+      if (!Number.isFinite(value)) return "n/a";
+      return value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+    function pct(value, decimals = 0) {
+      if (!Number.isFinite(value)) return "n/a";
+      return `${(value * 100).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`;
+    }
+    function ratio(value) { if (!Number.isFinite(value)) return "n/a"; return `${numberFmt(value, 1)}×`; }
+    function cssClassFor(value) {
+      if (!Number.isFinite(value)) return "neutral";
+      if (value > 0) return "positive";
+      if (value < 0) return "negative";
+      return "neutral";
+    }
+    function tagForRoi(roi) {
+      if (!Number.isFinite(roi)) return `<span class="tag warn">n/a</span>`;
+      if (roi >= 1) return `<span class="tag good">${pct(roi, 0)}</span>`;
+      if (roi >= 0) return `<span class="tag warn">${pct(roi, 0)}</span>`;
+      return `<span class="tag bad">${pct(roi, 0)}</span>`;
+    }
+    function fieldPathSet(path, value) {
+      const parts = path.split(".");
+      let obj = state;
+      for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+      obj[parts[parts.length - 1]] = value;
+    }
+    const adoption = () => Math.max(0, n(state.adoptionPct)) / 100;
+    function getTaskCreditsPerUser(a) {
+      return a.tasks.light * state.credits.light + a.tasks.medium * state.credits.medium + a.tasks.heavy * state.credits.heavy;
+    }
+    function costFromCredits(credits) { return (credits / 100) * state.pricePer100; }
+    function hourlyCost(a) { return (a.salary * (1 + state.employerBurdenPct / 100)) / Math.max(state.productiveHours, 1); }
+    function humanHoursPerUser(a) {
+      return (a.tasks.light * state.minutes.light + a.tasks.medium * state.minutes.medium + a.tasks.heavy * state.minutes.heavy) / 60;
+    }
+    function totalLicensed() { return state.archetypes.reduce((s, a) => s + n(a.users), 0); }
+    function totalActive() { return totalLicensed() * adoption(); }
+    function weightedHourlyCost() {
+      const users = totalLicensed();
+      if (users > 0) return state.archetypes.reduce((s, a) => s + n(a.users) * hourlyCost(a), 0) / users;
+      return state.archetypes.reduce((s, a) => s + hourlyCost(a), 0) / state.archetypes.length;
+    }
+
+    function calculate(realizationOverride) {
+      const realization = (realizationOverride !== undefined ? realizationOverride : state.realizationPct) / 100;
+      const adopt = adoption();
+      const archetypeRows = state.archetypes.map(a => {
+        const activeUsers = n(a.users) * adopt;
+        const creditsPerUser = getTaskCreditsPerUser(a);
+        const coworkCostPerUser = costFromCredits(creditsPerUser);
+        const monthlyCredits = activeUsers * creditsPerUser;
+        const monthlyCoworkCost = costFromCredits(monthlyCredits);
+        const hCost = hourlyCost(a);
+        const hoursPerUser = humanHoursPerUser(a);
+        const humanHoursMonth = activeUsers * hoursPerUser;
+        const labourValue = humanHoursMonth * hCost * realization;
+        const delta = labourValue - monthlyCoworkCost;
+        const benefitCost = monthlyCoworkCost > 0 ? labourValue / monthlyCoworkCost : NaN;
+        const roi = monthlyCoworkCost > 0 ? delta / monthlyCoworkCost : NaN;
+        return { a, activeUsers, creditsPerUser, coworkCostPerUser, monthlyCredits, monthlyCoworkCost, hCost, hoursPerUser, humanHoursMonth, labourValue, delta, benefitCost, roi };
+      });
+      const monthlyCredits = archetypeRows.reduce((s, r) => s + r.monthlyCredits, 0);
+      const monthlyBudget = costFromCredits(monthlyCredits);
+      const activeUsers = totalActive();
+      const labourValue = archetypeRows.reduce((s, r) => s + r.labourValue, 0);
+      const humanHours = archetypeRows.reduce((s, r) => s + r.humanHoursMonth, 0);
+      const delta = labourValue - monthlyBudget;
+      const roi = monthlyBudget > 0 ? delta / monthlyBudget : NaN;
+      const benefitCost = monthlyBudget > 0 ? labourValue / monthlyBudget : NaN;
+      return { archetypeRows, monthlyCredits, monthlyBudget, activeUsers, labourValue, humanHours, delta, roi, benefitCost };
+    }
+
+    function inputNumber(value, attrs) {
+      return `<input type="number" min="${attrs.min ?? 0}" step="${attrs.step ?? 1}" value="${value}" ${attrs.extra || ""} />`;
+    }
+    function renderInputs() {
+      byId("usersBody").innerHTML = state.archetypes.map((a, i) => `
+        <tr>
+          <td>${a.label}</td>
+          <td>${inputNumber(a.users, { step: 1, extra: `data-archetype="${i}" data-prop="users"` })}</td>
+        </tr>`).join("");
+
+      byId("tasksBody").innerHTML = state.archetypes.map((a, i) => `
+        <tr>
+          <td>${a.label}</td>
+          <td>${inputNumber(a.tasks.light, { step: 1, extra: `data-archetype="${i}" data-task="light"` })}</td>
+          <td>${inputNumber(a.tasks.medium, { step: 1, extra: `data-archetype="${i}" data-task="medium"` })}</td>
+          <td>${inputNumber(a.tasks.heavy, { step: 1, extra: `data-archetype="${i}" data-task="heavy"` })}</td>
+          <td id="creditsPerUser-${i}">0</td>
+          <td id="costPerUser-${i}">0</td>
+        </tr>`).join("");
+
+      byId("costBody").innerHTML = state.archetypes.map((a, i) => `
+        <tr>
+          <td>${a.label}</td>
+          <td class="muted">${a.profile || ""}</td>
+          <td>${inputNumber(a.salary, { step: 1000, extra: `data-archetype="${i}" data-prop="salary"` })}</td>
+          <td id="loadedAnnual-${i}">0</td>
+          <td id="hourlyCost-${i}">0</td>
+          <td id="weight-${i}">0%</td>
+        </tr>`).join("");
+
+      document.querySelectorAll("input[data-archetype]").forEach(input => input.addEventListener("input", handleInput));
+    }
+    function syncTopInputsFromState() {
+      byId("currencySymbol").value = state.currencySymbol;
+      byId("pricePer100").value = state.pricePer100;
+      byId("creditsLight").value = state.credits.light;
+      byId("creditsMedium").value = state.credits.medium;
+      byId("creditsHeavy").value = state.credits.heavy;
+      byId("employerBurdenPct").value = state.employerBurdenPct;
+      byId("productiveHours").value = state.productiveHours;
+      byId("minutesLight").value = state.minutes.light;
+      byId("minutesMedium").value = state.minutes.medium;
+      byId("minutesHeavy").value = state.minutes.heavy;
+      byId("realizationPct").value = state.realizationPct;
+      byId("adoptionPct").value = state.adoptionPct;
+      document.querySelectorAll("#regionSeg button").forEach(b => b.classList.toggle("active", b.dataset.region === state.region));
+    }
+    function handleInput(e) {
+      const input = e.target;
+      if (input.id === "currencySymbol") state.currencySymbol = input.value || "";
+      if (input.dataset.field) fieldPathSet(input.dataset.field, n(input.value));
+      const i = input.dataset.archetype;
+      if (i !== undefined) {
+        const a = state.archetypes[Number(i)];
+        if (input.dataset.prop === "users") a.users = n(input.value);
+        if (input.dataset.prop === "salary") a.salary = n(input.value);
+        if (input.dataset.task) a.tasks[input.dataset.task] = n(input.value);
+      }
+      update();
+    }
+    function applyRegion(code) {
+      const r = REGIONS[code]; if (!r) return;
+      state.region = code;
+      state.currencySymbol = r.currencySymbol;
+      state.employerBurdenPct = r.employerBurdenPct;
+      state.productiveHours = r.productiveHours;
+      state.archetypes.forEach((a, i) => { a.salary = r.salaries[i]; });
+      syncTopInputsFromState();
+      renderInputs();
+      update();
+    }
+    function applyBlendedRate(targetRate) {
+      const salary = targetRate * state.productiveHours / (1 + state.employerBurdenPct / 100);
+      state.archetypes.forEach(a => { a.salary = Math.round(salary); });
+      renderInputs();
+      update();
+    }
+    function update() {
+      state.pricePer100 = n(state.pricePer100);
+      state.employerBurdenPct = n(state.employerBurdenPct);
+      state.productiveHours = Math.max(n(state.productiveHours, 1), 1);
+      state.realizationPct = n(state.realizationPct);
+      state.adoptionPct = n(state.adoptionPct);
+      const result = calculate();
+
+      byId("activeUsersDisplay").value = numberFmt(result.activeUsers, 0);
+      byId("kpiCredits").textContent = numberFmt(result.monthlyCredits, 0);
+      byId("kpiMonthlyBudget").textContent = money(result.monthlyBudget, 0);
+      byId("kpiPerUser").textContent = result.activeUsers > 0 ? money(result.monthlyBudget / result.activeUsers, 2) : "n/a";
+      byId("kpiAnnualBudget").textContent = money(result.monthlyBudget * 12, 0);
+      byId("kpiRoiCost").textContent = money(result.monthlyBudget, 0);
+      byId("kpiLabourValue").textContent = money(result.labourValue, 0);
+      byId("kpiDelta").textContent = `${money(result.delta, 0)} / mo`;
+      byId("kpiDelta").className = `value ${cssClassFor(result.delta)}`;
+      byId("kpiRoi").textContent = pct(result.roi, 0);
+      byId("kpiRoi").className = `value ${cssClassFor(result.roi)}`;
+      byId("kpiRoiSub").textContent = `${ratio(result.benefitCost)} benefit:cost · ${money(result.delta * 12, 0)}/yr`;
+
+      const licensed = totalLicensed();
+      result.archetypeRows.forEach((r, i) => {
+        byId(`creditsPerUser-${i}`).textContent = numberFmt(r.creditsPerUser, 0);
+        byId(`costPerUser-${i}`).textContent = money(r.coworkCostPerUser, 2);
+        byId(`loadedAnnual-${i}`).textContent = money(r.a.salary * (1 + state.employerBurdenPct / 100), 0);
+        byId(`hourlyCost-${i}`).textContent = money(r.hCost, 2);
+        byId(`weight-${i}`).textContent = licensed > 0 ? pct(n(r.a.users) / licensed, 0) : "equal";
+      });
+
+      byId("weightedHourlyDisplay").value = money(weightedHourlyCost(), 2);
+      renderTaskComparison();
+      renderRoiTable(result);
+      renderBars(result);
+      renderSensitivity();
+    }
+    function renderTaskComparison() {
+      const wh = weightedHourlyCost();
+      const tasks = [["light", "Light"], ["medium", "Medium"], ["heavy", "Heavy"]];
+      byId("taskCompareBody").innerHTML = tasks.map(([key, label]) => {
+        const credits = state.credits[key];
+        const cCost = costFromCredits(credits);
+        const mins = state.minutes[key];
+        const labour = (mins / 60) * wh * (state.realizationPct / 100);
+        const be = wh > 0 ? (cCost / wh) * 60 : NaN;
+        const taskRatio = cCost > 0 ? labour / cCost : NaN;
+        return `<tr>
+          <td>${label}</td>
+          <td>${numberFmt(credits, 0)}</td>
+          <td>${money(cCost, 2)}</td>
+          <td>${numberFmt(mins, 0)}</td>
+          <td>${numberFmt(be, 1)}</td>
+          <td>${money(labour, 2)}</td>
+          <td>${ratio(taskRatio)}</td>
+        </tr>`;
+      }).join("");
+    }
+    function renderRoiTable(result) {
+      byId("roiBody").innerHTML = result.archetypeRows.map(r => `
+        <tr>
+          <td>${r.a.label}</td>
+          <td>${numberFmt(r.activeUsers, 0)}</td>
+          <td>${money(r.monthlyCoworkCost, 0)}</td>
+          <td>${numberFmt(r.humanHoursMonth, 1)}</td>
+          <td>${money(r.labourValue, 0)}</td>
+          <td class="${cssClassFor(r.delta)}">${money(r.delta, 0)}</td>
+          <td>${ratio(r.benefitCost)}</td>
+          <td>${tagForRoi(r.roi)}</td>
+        </tr>`).join("");
+      byId("roiFoot").innerHTML = `
+        <tr>
+          <th>Total</th>
+          <th>${numberFmt(result.activeUsers, 0)}</th>
+          <th>${money(result.monthlyBudget, 0)}</th>
+          <th>${numberFmt(result.humanHours, 1)}</th>
+          <th>${money(result.labourValue, 0)}</th>
+          <th class="${cssClassFor(result.delta)}">${money(result.delta, 0)}</th>
+          <th>${ratio(result.benefitCost)}</th>
+          <th>${tagForRoi(result.roi)}</th>
+        </tr>`;
+    }
+    function renderBars(result) {
+      const maxV = Math.max(...result.archetypeRows.flatMap(r => [r.labourValue, r.monthlyCoworkCost]), 1);
+      byId("bars").innerHTML = result.archetypeRows.map(r => `
+        <div class="barrow">
+          <div>${r.a.label}</div>
+          <div>
+            <div class="bartrack"><div class="barfill bar-hu" style="width:${Math.min(100, r.labourValue / maxV * 100)}%"></div></div>
+            <div class="bartrack" style="margin-top:4px"><div class="barfill bar-ai" style="width:${Math.min(100, r.monthlyCoworkCost / maxV * 100)}%"></div></div>
+          </div>
+          <div style="text-align:right">
+            <span class="positive" style="font-weight:800">${money(r.labourValue, 0)}</span><br>
+            <span style="color:var(--accent);font-weight:800">${money(r.monthlyCoworkCost, 0)}</span>
+          </div>
+        </div>`).join("");
+    }
+    function renderSensitivity() {
+      const levels = [["Conservative", 50], ["Base", 75], ["Optimistic", 100]];
+      byId("sens").innerHTML = levels.map(([label, real]) => {
+        const r = calculate(real);
+        const cls = cssClassFor(r.roi);
+        return `<div class="cell">
+          <h4>${label} · ${real}% realization</h4>
+          <div class="big ${cls}">${pct(r.roi, 0)}</div>
+          <div class="sm">${money(r.delta, 0)}/mo · ${money(r.delta * 12, 0)}/yr</div>
+        </div>`;
+      }).join("");
+    }
+    function resetState() {
+      if (!confirm("Reset all assumptions to defaults?")) return;
+      state = deepClone(defaults);
+      storage.removeItem(STORAGE_KEY);
+      syncTopInputsFromState();
+      renderInputs();
+      update();
+    }
+    function loadSampleUsers() {
+      state.archetypes[0].users = 400;
+      state.archetypes[1].users = 250;
+      state.archetypes[2].users = 200;
+      state.archetypes[3].users = 150;
+      renderInputs();
+      syncTopInputsFromState();
+      update();
+    }
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "cowork-roi-assumptions.json"; a.click();
+      URL.revokeObjectURL(url);
+    }
+    document.addEventListener("DOMContentLoaded", () => {
+      syncTopInputsFromState();
+      renderInputs();
+      update();
+      document.querySelectorAll("input[data-field], #currencySymbol").forEach(input => input.addEventListener("input", handleInput));
+      document.querySelectorAll("#regionSeg button").forEach(b => b.addEventListener("click", () => applyRegion(b.dataset.region)));
+      byId("btnBlend50").addEventListener("click", () => applyBlendedRate(50));
+      byId("btnBlend75").addEventListener("click", () => applyBlendedRate(75));
+      byId("btnReset").addEventListener("click", resetState);
+      byId("btnSample").addEventListener("click", loadSampleUsers);
+      byId("btnExport").addEventListener("click", exportJson);
+      byId("btnPrint").addEventListener("click", () => window.print());
+
+      const modal = byId("helpModal");
+      const openModal = () => modal.classList.add("open");
+      const closeModal = () => modal.classList.remove("open");
+      byId("btnHelp").addEventListener("click", openModal);
+      byId("btnHelpClose").addEventListener("click", closeModal);
+      modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+      document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+    });
+  </script>
+</body>
+</html>

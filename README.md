@@ -1,2 +1,2 @@
-# amoedo-vibes
+# Vibes
 Share of small vibe coded artifiacts
