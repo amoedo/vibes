@@ -144,9 +144,12 @@
       <div class="right">
         <button id="btnReset">Reset</button>
         <button id="btnExport">Export JSON</button>
+        <button id="btnImport">Import JSON</button>
         <button id="btnPrint">Print / PDF</button>
       </div>
     </div>
+
+    <input id="importFile" type="file" accept="application/json,.json" hidden />
 
     <div class="modal-overlay" id="helpModal" role="dialog" aria-modal="true">
       <div class="modal">
@@ -603,6 +606,49 @@
     })();
 
     function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+    function mergeDefaults(source) {
+      const merged = deepClone(defaults);
+      if (!source || typeof source !== "object") return merged;
+
+      if (source.region && REGIONS[source.region]) merged.region = source.region;
+      if (source.currencySymbol !== undefined) merged.currencySymbol = String(source.currencySymbol);
+      if (source.pricePer100 !== undefined) merged.pricePer100 = n(source.pricePer100, merged.pricePer100);
+      if (source.employerBurdenPct !== undefined) merged.employerBurdenPct = n(source.employerBurdenPct, merged.employerBurdenPct);
+      if (source.productiveHours !== undefined) merged.productiveHours = Math.max(n(source.productiveHours, merged.productiveHours), 1);
+      if (source.realizationPct !== undefined) merged.realizationPct = n(source.realizationPct, merged.realizationPct);
+      if (source.adoptionPct !== undefined) merged.adoptionPct = n(source.adoptionPct, merged.adoptionPct);
+
+      if (source.credits && typeof source.credits === "object") {
+        merged.credits.light = n(source.credits.light, merged.credits.light);
+        merged.credits.medium = n(source.credits.medium, merged.credits.medium);
+        merged.credits.heavy = n(source.credits.heavy, merged.credits.heavy);
+      }
+
+      if (source.minutes && typeof source.minutes === "object") {
+        merged.minutes.light = n(source.minutes.light, merged.minutes.light);
+        merged.minutes.medium = n(source.minutes.medium, merged.minutes.medium);
+        merged.minutes.heavy = n(source.minutes.heavy, merged.minutes.heavy);
+      }
+
+      if (Array.isArray(source.archetypes)) {
+        merged.archetypes = merged.archetypes.map((fallback, index) => {
+          const incoming = source.archetypes[index] || {};
+          return {
+            ...fallback,
+            ...incoming,
+            users: n(incoming.users, fallback.users),
+            salary: n(incoming.salary, fallback.salary),
+            tasks: {
+              light: n(incoming.tasks && incoming.tasks.light, fallback.tasks.light),
+              medium: n(incoming.tasks && incoming.tasks.medium, fallback.tasks.medium),
+              heavy: n(incoming.tasks && incoming.tasks.heavy, fallback.tasks.heavy)
+            }
+          };
+        });
+      }
+
+      return merged;
+    }
     function n(value, fallback = 0) { const p = Number(value); return Number.isFinite(p) ? p : fallback; }
     function byId(id) { return document.getElementById(id); }
     function getCurrency() { return state.currencySymbol || ""; }
@@ -797,6 +843,24 @@
       renderRoiTable(result);
       renderBars(result);
       renderSensitivity();
+      saveStateToStorage();
+    }
+    function saveStateToStorage() {
+      try {
+        storage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        /* ignore storage failures */
+      }
+    }
+    function loadStateFromStorage() {
+      try {
+        const raw = storage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        state = mergeDefaults(JSON.parse(raw));
+        return true;
+      } catch (e) {
+        return false;
+      }
     }
     function renderTaskComparison() {
       const wh = weightedHourlyCost();
@@ -894,7 +958,23 @@
       a.href = url; a.download = "cowork-roi-assumptions.json"; a.click();
       URL.revokeObjectURL(url);
     }
+    function importJsonFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          state = mergeDefaults(JSON.parse(String(reader.result || "{}")));
+          syncTopInputsFromState();
+          renderInputs();
+          update();
+        } catch (e) {
+          alert("That file is not valid JSON or does not match the estimator config format.");
+        }
+      };
+      reader.readAsText(file);
+    }
     document.addEventListener("DOMContentLoaded", () => {
+      loadStateFromStorage();
       syncTopInputsFromState();
       renderInputs();
       update();
@@ -905,6 +985,11 @@
       byId("btnReset").addEventListener("click", resetState);
       byId("btnSample").addEventListener("click", loadSampleUsers);
       byId("btnExport").addEventListener("click", exportJson);
+      byId("btnImport").addEventListener("click", () => byId("importFile").click());
+      byId("importFile").addEventListener("change", e => {
+        importJsonFile(e.target.files && e.target.files[0]);
+        e.target.value = "";
+      });
       byId("btnPrint").addEventListener("click", () => window.print());
 
       const modal = byId("helpModal");
